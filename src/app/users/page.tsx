@@ -1,8 +1,9 @@
-'use client'
+'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -14,20 +15,49 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from 'next/link';
 import { CreateUserDialog } from '@/components/UserDialogue';
 
+// Define the User type
+interface User {
+  id: string; // Changed to string since it's UUID
+  username: string;
+  email_id: string; // Changed to match your database column
+  organizations_name: string; // Changed to match your database column
+  created_on: string; // Ensure this matches the returned date format
+}
+
 export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Fetch users from API
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/get_users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      setUsers(data.users); // Adjust this based on your API response structure
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers(); // Fetch users initially when the component mounts
+  }, []);
+
   return (
     <div className="p-4 sm:p-6">
       {/* Page Title */}
       <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-semibold mb-1">Users</h1>
+        <h1 className="text-2xl font-semibold mb-1">Users</h1>
         <p className="text-gray-600">View and manage users</p>
       </div>
 
       {/* Navigation Tabs */}
       <div className="mb-6">
-        <ul className="flex flex-wrap space-x-4 sm:space-x-6 border-b">
-          <li className="pb-2 border-b-2 border-black">
-            <Link href="#" className="text-black font-medium">All</Link>
+        <ul className="flex flex-wrap space-x-4 sm:space-x-6 border-b border-gray-300 pb-2">
+          <li className="pb-2 border-b-2 text-indigo-600 hover:bg-indigo-700">
+            <Link href="#" className="text-indigo-600 font-medium">All</Link>
           </li>
           <li className="pb-2">
             <Link href="#" className="text-gray-500 hover:text-gray-700">Invitations</Link>
@@ -42,50 +72,44 @@ export default function UsersPage() {
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search"
-              className="pl-8 w-full"
+              className="pl-8 w-full rounded-lg border border-gray-300 shadow-sm focus:ring focus:ring-blue-500"
             />
           </div>
-          <Select>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Sort by: Joined" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="joined">Joined</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="last-signed-in">Last signed in</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
-        <CreateUserDialog />
+        <CreateUserDialog fetchUsers={fetchUsers} />
       </div>
 
       {/* User Table */}
-      <div className="bg-white rounded-lg border mt-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 p-4 border-b text-sm font-medium text-gray-500">
+      <div className="bg-white rounded-lg border border-gray-300 mt-6 shadow-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-3 p-4 border-b text-sm font-medium text-gray-500">
           <div>User</div>
-          <div className="hidden sm:block">Last signed in</div>
-          <div className="flex items-center">
-            Joined <ChevronDown className="ml-1 h-4 w-4" />
-          </div>
+          <div>Organization</div>
+          <div>Created</div>
         </div>
 
-        {/* User Row */}
-        <div className="p-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 items-center">
-            <div className="flex items-center gap-3">
-              <Avatar>
-                <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=AkashV" />
-                <AvatarFallback>AV</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">Akash V</div>
-                <div className="text-sm text-gray-500">akashv0907@gmail.com</div>
+        {/* User Rows */}
+        {users.length > 0 ? (
+          users.map((user) => (
+            <div key={user.id} className="p-4 border-b border-gray-200 last:border-b-0">
+              <div className="grid grid-cols-1 sm:grid-cols-3 items-center">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} />
+                    <AvatarFallback>{user.username[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium text-gray-800">{user.username}</div>
+                    <div className="text-sm text-gray-500">{user.email_id}</div>
+                  </div>
+                </div>
+                <div className="text-gray-600 text-center sm:text-left">{user.organizations_name}</div>
+                <div className="text-gray-600 text-center sm:text-left">{user.created_on}</div>
               </div>
             </div>
-            <div className="text-gray-600 hidden sm:block">Today at 3:49 PM</div>
-            <div className="text-gray-600">Today at 3:49 PM</div>
-          </div>
-        </div>
+          ))
+        ) : (
+          <div className="p-4 text-center text-gray-600">No users found.</div>
+        )}
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ export function Navigation() {
   const links = [
     { href: '/users', label: 'Users' },
     { href: '/organizations', label: 'Organizations' },
+    { href: '/roles_permissions', label: 'Roles&Permissions' },
   ];
 
   return (
