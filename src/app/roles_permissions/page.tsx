@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Search, ChevronDown, X } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,52 +21,90 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-// Define the Role type
+// Define the Role type with permissions
 interface Role {
   id: string;
-  roles_name: string;
-  owner: string;
+  role_name: string;
+  description: string; // Added description
   created_on: string;
+  permissions: string;
 }
 
 export default function RolesAndPermissionsPage() {
-  const [roleName, setRoleName] = useState('');
-  const [roleKey, setRoleKey] = useState('');
+  const [roleKey, setRoleKey] = useState(''); // Renamed to roleKey
   const [description, setDescription] = useState('');
+  const [permissions, setPermissions] = useState(''); // Add state for permissions
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false); // State to control dialog
 
-  const handleCreateRole = () => {
+  // Fetch roles data from the API on component mount
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/get_roles_data');
+        if (!response.ok) {
+          throw new Error('Failed to fetch roles data');
+        }
+        const data = await response.json();
+        setRoles(data.roles);
+      } catch (error) {
+        console.error('Error fetching roles:', error);
+      }
+    };
+
+    fetchRoles();
+  }, []); // Run only once on mount
+
+  const handleCreateRole = async () => {
     setLoading(true);
     setError('');
     setSuccess(false);
 
     // Validate the form
-    if (!roleName || !roleKey) {
-      setError("Role name and key are required.");
+    if (!roleKey || !permissions) {
+      setError("Role key and permissions are required.");
       setLoading(false);
       return;
     }
 
-    // Simulate role creation
-    const newRole: Role = {
-      id: Date.now().toString(),
-      roles_name: roleName,
-      owner: roleKey,
-      created_on: new Date().toLocaleString(),
-    };
+    try {
+      // Make a POST request to the API
+      const response = await fetch('http://127.0.0.1:5000/create_role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role_name: roleKey,
+          description,
+          permissions,
+        }),
+      });
 
-    setRoles(prev => [...prev, newRole]);
-    setSuccess(true);
-    setRoleName('');
-    setRoleKey('');
-    setDescription('');
-
-    setTimeout(() => {
+      if (response.ok) {
+        // Fetch the updated roles list
+        const fetchResponse = await fetch('http://127.0.0.1:5000/get_roles_data');
+        const data = await fetchResponse.json();
+        setRoles(data.roles); // Update the roles state
+        setSuccess(true);
+        // Reset form fields
+        setRoleKey('');
+        setDescription('');
+        setPermissions('');
+        setDialogOpen(false); // Close the dialog
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to create role.');
+      }
+    } catch (error) {
+      setError('An error occurred while creating the role.');
+      console.error('Error creating role:', error);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -91,7 +129,7 @@ export default function RolesAndPermissionsPage() {
             <Input placeholder="Search roles..." className="pl-8 w-full rounded-lg border border-gray-300 shadow-sm focus:ring focus:ring-indigo-500" />
           </div>
         </div>
-        <Dialog>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto rounded-lg shadow">Create Role</Button>
           </DialogTrigger>
@@ -101,24 +139,10 @@ export default function RolesAndPermissionsPage() {
                 <DialogTitle className="text-xl font-semibold">Create new role</DialogTitle>
                 <p className="text-sm text-gray-500 mt-1">Create a custom role which can be assigned to your organization members.</p>
               </div>
-              <DialogTrigger asChild>
-                <Button variant="ghost" className="h-6 w-6 p-0">
-                  {/* <X className="h-4 w-4" /> */}
-                </Button>
-              </DialogTrigger>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g. Database access"
-                  value={roleName}
-                  onChange={(e) => setRoleName(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="key">Key</Label>
+                <Label htmlFor="key">Role</Label>
                 <div className="flex">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
                     org:
@@ -143,7 +167,7 @@ export default function RolesAndPermissionsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="permissions">Permissions</Label>
-                <Select>
+                <Select value={permissions} onValueChange={(value) => setPermissions(value)}>
                   <SelectTrigger id="permissions">
                     <SelectValue placeholder="Select permissions" />
                   </SelectTrigger>
@@ -156,7 +180,7 @@ export default function RolesAndPermissionsPage() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={handleCreateRole} className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Button onClick={handleCreateRole} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                 Create role
               </Button>
             </div>
@@ -167,8 +191,8 @@ export default function RolesAndPermissionsPage() {
       <div className="bg-white rounded-lg border shadow-lg">
         <div className="grid grid-cols-2 sm:grid-cols-4 p-4 border-b text-sm font-semibold text-gray-700 bg-gray-200">
           <div>Role</div>
-          <div>ID</div>
-          <div className="hidden sm:block">Owner</div>
+          <div>Description</div>
+          <div>Permissions</div>
           <div className="flex items-center">
             Created <ChevronDown className="ml-1 h-4 w-4 text-gray-600" />
           </div>
@@ -176,9 +200,9 @@ export default function RolesAndPermissionsPage() {
         {roles.length > 0 ? (
           roles.map((role) => (
             <div key={role.id} className="grid grid-cols-2 sm:grid-cols-4 p-4 border-b text-gray-800 hover:bg-gray-100 transition duration-150 ease-in-out">
-              <div>{role.roles_name}</div>
-              <div>{role.id}</div>
-              <div className="hidden sm:block">{role.owner}</div>
+              <div>{role.role_name}</div>
+              <div>{role.description}</div>
+              <div>{role.permissions}</div>
               <div>{role.created_on}</div>
             </div>
           ))

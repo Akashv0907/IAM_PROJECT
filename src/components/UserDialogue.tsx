@@ -24,17 +24,24 @@ interface Organization {
   name: string; // organization name only
 }
 
+// Define the Role type for role names
+interface Role {
+  name: string; // role name only
+}
+
 export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [organization, setOrganization] = useState('');
+  const [role, setRole] = useState(''); // New state for role
   const [ignorePolicies, setIgnorePolicies] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [organizations, setOrganizations] = useState<Organization[]>([]); // Array of organizations
+  const [roles, setRoles] = useState<Role[]>([]); // Array of roles
 
   // Fetch organizations from the API
   const fetchOrganizations = async () => {
@@ -50,9 +57,24 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
     }
   };
 
+  // Fetch roles from the API
+  const fetchRoles = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/get_roles');
+      if (!response.ok) {
+        throw new Error('Failed to fetch roles');
+      }
+      const data = await response.json();
+      setRoles(data.roles.map((name: string) => ({ name }))); // Create objects with name field
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     if (open) {
       fetchOrganizations(); // Fetch organizations when the dialog opens
+      fetchRoles(); // Fetch roles when the dialog opens
     }
   }, [open]);
 
@@ -61,11 +83,13 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
     setSuccessMessage('');
     setLoading(true);
 
+    // Correct field names to match what your Flask backend expects
     const userData = {
-      username,
-      email_id: email,
-      user_password: password,
-      organizations_name: organization,
+      username: username,                   // Correct key name
+      email_id: email,                      // Correct key name
+      user_password: password,              // Correct key name
+      organizations_name: organization,      // Correct key name
+      role: role,                           // Change 'role_name' to 'role'
       ignore_policies: ignorePolicies,
     };
 
@@ -80,7 +104,7 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Error creating user');
+        throw new Error(errorData.error || 'Error creating user'); // Use error key for messages
       }
 
       const data = await response.json();
@@ -89,6 +113,7 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
       setEmail('');
       setPassword('');
       setOrganization('');
+      setRole(''); // Reset role
       setIgnorePolicies(false);
       setOpen(false);
       fetchUsers();
@@ -135,6 +160,7 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
               className="w-full rounded-lg border border-gray-300 shadow-sm focus:ring focus:ring-blue-500"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              required
             />
           </div>
           <div className="grid gap-2">
@@ -146,6 +172,7 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
               className="w-full rounded-lg border border-gray-300 shadow-sm focus:ring focus:ring-blue-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </div>
           <div className="grid gap-2">
@@ -156,11 +183,12 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
               className="w-full rounded-lg border border-gray-300 shadow-sm focus:ring focus:ring-blue-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="organization">Organization</Label>
-            <Select value={organization || "default"} onValueChange={setOrganization}>
+            <Select value={organization || "default"} onValueChange={setOrganization} required>
               <SelectTrigger className="w-full border border-gray-300 shadow-sm rounded-lg p-2">
                 <SelectValue placeholder="Select an organization" />
               </SelectTrigger>
@@ -171,6 +199,25 @@ export function CreateUserDialog({ fetchUsers }: { fetchUsers: () => void }) {
                   organizations.map((org) => (
                     <SelectItem key={org.name} value={org.name}>
                       {org.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="role">Role</Label>
+            <Select value={role || "default"} onValueChange={setRole} required>
+              <SelectTrigger className="w-full border border-gray-300 shadow-sm rounded-lg p-2">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.length === 0 ? (
+                  <SelectItem value="no-roles" disabled>No roles available</SelectItem>
+                ) : (
+                  roles.map((role) => (
+                    <SelectItem key={role.name} value={role.name}>
+                      {role.name}
                     </SelectItem>
                   ))
                 )}

@@ -21,7 +21,8 @@ interface User {
   username: string;
   email_id: string; // Changed to match your database column
   organizations_name: string; // Changed to match your database column
-  created_on: string; // Ensure this matches the returned date format
+  created_on: string;
+  role: string;
 }
 
 export default function UsersPage() {
@@ -81,8 +82,9 @@ export default function UsersPage() {
 
       {/* User Table */}
       <div className="bg-white rounded-lg border border-gray-300 mt-6 shadow-lg">
-        <div className="grid grid-cols-1 sm:grid-cols-3 p-4 border-b text-sm font-medium text-gray-500">
+        <div className="grid grid-cols-1 sm:grid-cols-4 p-4 border-b text-sm font-medium text-gray-500">
           <div>User</div>
+          <div>Role</div>
           <div>Organization</div>
           <div>Created</div>
         </div>
@@ -91,7 +93,7 @@ export default function UsersPage() {
         {users.length > 0 ? (
           users.map((user) => (
             <div key={user.id} className="p-4 border-b border-gray-200 last:border-b-0">
-              <div className="grid grid-cols-1 sm:grid-cols-3 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center">
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} />
@@ -102,6 +104,7 @@ export default function UsersPage() {
                     <div className="text-sm text-gray-500">{user.email_id}</div>
                   </div>
                 </div>
+                <div className="text-gray-600 text-center sm:text-left">{user.role}</div>
                 <div className="text-gray-600 text-center sm:text-left">{user.organizations_name}</div>
                 <div className="text-gray-600 text-center sm:text-left">{user.created_on}</div>
               </div>
